@@ -11,6 +11,7 @@ import javax.swing.*;
 
 import edu.kis.powp.appbase.gui.WindowComponent;
 import edu.kis.powp.jobs2d.command.manager.CommandParser;
+import edu.kis.powp.jobs2d.command.manager.CommandStringParser;
 import edu.kis.powp.jobs2d.command.manager.DriverCommandManager;
 import edu.kis.powp.jobs2d.drivers.DriverManager;
 import edu.kis.powp.observer.Subscriber;
@@ -21,14 +22,16 @@ public class CommandManagerWindow extends JFrame implements WindowComponent {
     public DriverManager driverManager;
 
     private JTextArea currentCommandField;
-
     private boolean turnedOn = false;
     private List<Subscriber> observersList = new ArrayList<>();
 
     private String observerListString;
+    private String commandString;
+    private List<String> commands;
     private JTextArea observerListField;
+    private JTextArea commandList;
     private JTextField inputCommand;
-    CommandParser commandParser = new CommandParser();
+    CommandParser commandParser = new CommandStringParser();
 
     /**
      *
@@ -37,83 +40,33 @@ public class CommandManagerWindow extends JFrame implements WindowComponent {
 
     public CommandManagerWindow() {
         this.setTitle("Command Manager");
-        this.setSize(400, 400);
+        this.setSize(600, 600);
     }
 
-    public void CommandManagerWindowContent (){
-
-        Container content = this.getContentPane();
-        content.setLayout(new GridBagLayout());
-
-        GridBagConstraints c = new GridBagConstraints();
-
-        observerListField = new JTextArea("");
-        observerListField.setEditable(false);
-        c.fill = GridBagConstraints.BOTH;
-        c.weightx = 1;
-        c.gridx = 0;
-        c.weighty = 1;
-        content.add(observerListField, c);
-        updateObserverListField();
-
-        inputCommand = new JTextField("");
-        inputCommand.setEditable(true);
-        c.fill = GridBagConstraints.BOTH;
-        c.weightx = 1;
-        c.gridx = 0;
-        c.weighty = 1;
-        content.add(inputCommand, c);
-
-
-        currentCommandField = new JTextArea("");
-        currentCommandField.setEditable(false);
-        c.fill = GridBagConstraints.BOTH;
-        c.weightx = 1;
-        c.gridx = 0;
-        c.weighty = 1;
-        content.add(currentCommandField, c);
-        updateCurrentCommandField();
-
-        JButton btnRunCommand = new JButton("Run Command");
-        btnRunCommand.addActionListener((ActionEvent e) -> this.runCommand());
-        c.fill = GridBagConstraints.BOTH;
-        c.weightx = 1;
-        c.gridx = 0;
-        c.weighty = 1;
-        content.add(btnRunCommand, c);
-
-        JButton btnClearCommand = new JButton("Clear command");
-        btnClearCommand.addActionListener((ActionEvent e) -> this.clearCommand());
-        c.fill = GridBagConstraints.BOTH;
-        c.weightx = 1;
-        c.gridx = 0;
-        c.weighty = 1;
-        content.add(btnClearCommand, c);
-
-        JButton btnClearObservers = new JButton("Observers ON/OFF");
-        btnClearObservers.addActionListener((ActionEvent e) -> this.setObserversActiveOrInactive());
-        c.fill = GridBagConstraints.BOTH;
-        c.weightx = 1;
-        c.gridx = 0;
-        c.weighty = 1;
-        content.add(btnClearObservers, c);
-    }
-
-
-/*
-    public CommandManagerWindow() {
-        this.setTitle("Command Manager");
-        this.setSize(400, 400);
-        Container content = this.getContentPane();
-        content.setLayout(new GridBagLayout());
-        GridBagConstraints c = new GridBagConstraints();
-    }
-*/
+    //    public CommandManagerWindow() {
+    //
+    //    }
 
     private void clearCommand() {
         commandParser.clearCommands();
         commandManager.clearCurrentCommand();
         updateCurrentCommandField();
+    }
+
+    public void deleteObservers() {
+        commandManager.getChangePublisher().clearObservers();
+        this.updateObserverListField();
+    }
+
+    public void runCommand() {
+        commandParser.parseCommand();
+        commandManager.runCurrentCommand().execute(driverManager.getCurrentDriver());
+    }
+
+    public void addCommandToList() {
+        commandParser.addCommand(inputCommand.getText());
+        inputCommand.setText("");
+        updateCommandListField();
     }
 
     public void updateCurrentCommandField() {
@@ -135,11 +88,6 @@ public class CommandManagerWindow extends JFrame implements WindowComponent {
         this.updateObserverListField();
     }
 
-    public void runCommand() {
-        commandParser.parseCommand(inputCommand.getText());
-        commandManager.returnLastCommand().execute(driverManager.getCurrentDriver());
-    }
-
     private void updateObserverListField() {
         observerListString = "";
         List<Subscriber> commandChangeSubscribers = commandManager.getChangePublisher().getSubscribers();
@@ -152,8 +100,12 @@ public class CommandManagerWindow extends JFrame implements WindowComponent {
         observerListField.setText(observerListString);
     }
 
-    @Override
-    public void HideIfVisibleAndShowIfHidden() {
+    private void updateCommandListField() {
+
+        commandList.append(commandParser.getLastCommand() + "\n");
+    }
+
+    @Override public void HideIfVisibleAndShowIfHidden() {
         updateObserverListField();
         if (this.isVisible()) {
             this.setVisible(false);
@@ -161,5 +113,102 @@ public class CommandManagerWindow extends JFrame implements WindowComponent {
             this.setVisible(true);
         }
     }
+    //=======
+
+    /**
+     *
+     */
+
+    public void CommandManagerWindowContent() {
+
+        Container content = this.getContentPane();
+        content.setLayout(new GridBagLayout());
+
+        GridBagConstraints c = new GridBagConstraints();
+
+        this.setTitle("Command Manager");
+        this.setSize(600, 600);
+
+        this.commandManager = commandManager;
+        this.commands = new ArrayList<>();
+
+        observerListField = new JTextArea("");
+        observerListField.setEditable(false);
+        c.fill = GridBagConstraints.BOTH;
+        c.weightx = 1;
+        c.gridx = 0;
+        c.weighty = 1;
+        content.add(observerListField, c);
+        updateObserverListField();
+
+        commandList = new JTextArea("");
+        commandList.setEditable(false);
+        c.fill = GridBagConstraints.BOTH;
+        c.weightx = 1;
+        c.gridx = 0;
+        c.weighty = 1;
+        content.add(commandList, c);
+        updateCommandListField();
+
+        inputCommand = new JTextField("");
+        inputCommand.setEditable(true);
+        c.fill = GridBagConstraints.BOTH;
+        c.weightx = 1;
+        c.gridx = 0;
+        c.weighty = 1;
+        content.add(inputCommand, c);
+
+        currentCommandField = new JTextArea("");
+        currentCommandField.setEditable(false);
+        c.fill = GridBagConstraints.BOTH;
+        c.weightx = 1;
+        c.gridx = 0;
+        c.weighty = 1;
+        content.add(currentCommandField, c);
+        updateCurrentCommandField();
+
+        JButton btnAddCommandToList = new JButton("Add command");
+        btnAddCommandToList.addActionListener((ActionEvent e) -> this.addCommandToList());
+        c.fill = GridBagConstraints.BOTH;
+        c.weightx = 1;
+        c.gridx = 0;
+        c.weighty = 1;
+        content.add(btnAddCommandToList, c);
+
+        JButton btnRunCommand = new JButton("Run Command");
+        btnRunCommand.addActionListener((ActionEvent e) -> this.runCommand());
+        c.fill = GridBagConstraints.BOTH;
+        c.weightx = 1;
+        c.gridx = 0;
+        c.weighty = 1;
+        content.add(btnRunCommand, c);
+
+        JButton btnClearCommand = new JButton("Clear command");
+        btnClearCommand.addActionListener((ActionEvent e) -> this.clearCommand());
+        c.fill = GridBagConstraints.BOTH;
+        c.weightx = 1;
+        c.gridx = 0;
+        c.weighty = 1;
+        content.add(btnClearCommand, c);
+
+        JButton btnClearObservers = new JButton("Delete observers");
+        btnClearObservers.addActionListener((ActionEvent e) -> this.deleteObservers());
+        c.fill = GridBagConstraints.BOTH;
+        c.weightx = 1;
+        c.gridx = 0;
+        c.weighty = 1;
+        content.add(btnClearObservers, c);
+    }
+
+
+/*
+    public CommandManagerWindow() {
+        this.setTitle("Command Manager");
+        this.setSize(400, 400);
+        Container content = this.getContentPane();
+        content.setLayout(new GridBagLayout());
+        GridBagConstraints c = new GridBagConstraints();
+    }
+*/
 
 }
